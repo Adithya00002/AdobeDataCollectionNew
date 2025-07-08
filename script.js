@@ -180,6 +180,7 @@ function updateCartIcon() {
     }
 }
 
+// Existing addToCart function
 function addToCart(productId) {
     const product = products.find(p => p.id === productId);
     if (product) {
@@ -190,19 +191,19 @@ function addToCart(productId) {
         }
         saveCart();
 
-        // --- Digital Data Layer for "Product Added to Cart" ---
+        // --- ADD THIS SECTION FOR ADOBE ANALYTICS TRACKING ---
+        // Populate digitalData for the product added event
+        window.digitalData = window.digitalData || {};
+        window.digitalData.product = window.digitalData.product || {};
         window.digitalData.product.id = product.id;
         window.digitalData.product.name = product.name;
         window.digitalData.product.brand = product.brand;
         window.digitalData.product.price = product.price;
-        // You can add more product details here if available and relevant (e.g., category)
 
-        // Push a custom event name to the events array
-        window.digitalData.event.push('productAdded');
-
-        // Trigger a custom event for Adobe Tags to listen for
-        _satellite.track('productAdded');
-        // --- End Digital Data Layer ---
+        // Fire the custom event
+        _satellite.track('productAdded'); // Make sure your Tags rule listens for 'productAdded'
+        console.log("Adobe Analytics: _satellite.track('productAdded') fired!");
+        // --- END ADOBE ANALYTICS TRACKING SECTION ---
     }
 }
 
@@ -285,19 +286,22 @@ function renderCartTable() {
 
 // Function to apply coupon
 function applyCoupon() {
-    const couponInput = document.getElementById('coupon-input');
+    const couponInput = document.getElementById('coupon-input'); // Ensure your HTML has an element with ID 'coupon-input'
     if (!couponInput) return;
+
     const couponCode = couponInput.value.trim().toUpperCase();
 
-    // --- Digital Data Layer for "Coupon Code Entered" ---
+    // --- ADD THIS SECTION FOR ADOBE ANALYTICS TRACKING ---
+    // Populate digitalData for coupon attempt
+    window.digitalData = window.digitalData || {};
+    window.digitalData.transaction = window.digitalData.transaction || {};
     window.digitalData.transaction.couponCode = couponCode;
+    window.digitalData.transaction.couponStatus = (couponCode === 'CODE50') ? 'Applied' : 'Invalid'; // Based on your JS logic
 
-    // Push a custom event name
-    window.digitalData.event.push('couponAttempt');
-
-    // Trigger a custom event for Adobe Tags
-    _satellite.track('couponAttempt');
-    // --- End Digital Data Layer ---
+    // Fire the custom event
+    _satellite.track('couponAttempt'); // Make sure your Tags rule listens for 'couponAttempt'
+    console.log("Adobe Analytics: _satellite.track('couponAttempt') fired for code: " + couponCode);
+    // --- END ADOBE ANALYTICS TRACKING SECTION ---
 
     if (couponCode === 'CODE50') {
         couponApplied = true;
@@ -547,46 +551,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- Contact Form Tracking Code ---
 document.addEventListener('DOMContentLoaded', function() {
+    // Get values AFTER the DOM is ready and elements are available
     let Nameval = document.getElementById('name');
     let Emailval = document.getElementById('email');
-    // Assuming you add an ID 'inquiry_category' to your select element for inquiry:
-    let Inq_cat = document.getElementById('inquiry_category');
+    let Subjectval = document.getElementById('subject'); // Corrected from Inq_cat based on contact.html
     let Messageval = document.getElementById('message');
 
     const contactForm = document.getElementById('contactForm');
 
     if (contactForm) {
         contactForm.addEventListener('submit', (e) => {
-            // Consider e.preventDefault() if you want to ensure analytics fires before page refresh.
-            // If you prevent default, you'll need to manually submit the form or use AJAX.
+            // For Adobe Analytics, we typically let the form submit naturally
+            // unless you have an AJAX submission. If the page reloads, the beacon will be sent before the reload.
 
-            let charactersInMessage = Messageval ? Messageval.value.length : 0;
-            let inquiryCategoryValue = Inq_cat ? Inq_cat.value : 'N/A'; // Default if element not found
-
-            // --- Digital Data Layer for "Contact Form Submission" ---
+            // Populate digitalData for contact form submission
+            window.digitalData = window.digitalData || {};
+            window.digitalData.form = window.digitalData.form || {};
             window.digitalData.form.name = 'Contact Us Form';
             window.digitalData.form.id = 'contactForm';
-            window.digitalData.form.inquiryCategory = inquiryCategoryValue;
-            window.digitalData.form.messageCharacters = charactersInMessage;
+            window.digitalData.form.inquiryCategory = Subjectval ? Subjectval.value : 'N/A'; // Using 'subject' as inquiry category
+            window.digitalData.form.messageLength = Messageval ? Messageval.value.length : 0;
+            window.digitalData.form.customerEmail = Emailval ? Emailval.value : 'N/A';
 
-            // Push a custom event name
-            window.digitalData.event.push('contactFormSubmit');
+            // Fire the custom event
+            _satellite.track('contactFormSubmit'); // Make sure your Tags rule listens for 'contactFormSubmit'
+            console.log("Adobe Analytics: _satellite.track('contactFormSubmit') fired!");
 
-            // Trigger a custom event for Adobe Tags
-            _satellite.track('contactFormSubmit');
-            // --- End Digital Data Layer ---
-
-            // Remove or comment out the gtag call:
-            /*
-            gtag('event', 'contact_form_submit', {
-                inquiry_category: inquiryCategoryValue,
-                characters_in_message: charactersInMessage,
-                submission_count: 1,
-                form_id: 'contactForm',
-                form_name: 'Contact Us Form',
-                page_location: window.location.href
-            });
-            */
+            // Optional: If you want to prevent default form submission for debugging or AJAX
+            // e.preventDefault();
         });
     }
 });
